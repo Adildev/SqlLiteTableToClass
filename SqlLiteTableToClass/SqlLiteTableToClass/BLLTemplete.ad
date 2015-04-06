@@ -1,0 +1,50 @@
+﻿
+
+using System;
+using System.Collections.Generic;
+using System.Data;
+using System.Data.SqlClient;
+using System.Data.SQLite;
+
+    public static class @@CLASSNAMEBLL
+    {
+
+
+        public static List<@@CLASSNAME> GetAll@@CLASSNAME(System.Int64? @@CLASSNAMEID)
+        {
+            List<@@CLASSNAME> @@CLASSNAMEList = new List<@@CLASSNAME>();
+			SQLiteParameter[] p = new SQLiteParameter[1];
+            p[0] = new SQLiteParameter("@@@CLASSNAMEID", @@CLASSNAMEID);
+            DataTable dt = (new SQLHelper()).ExecuteDataSet(CommandType.StoredProcedure, "@@CLASSNAMESearch", p).Tables[0];
+            foreach (DataRow dr in dt.Rows)
+            {
+                @@CLASSNAME obj@@CLASSNAME = new @@CLASSNAME();
+				
+				@@FOREACHSEARCHPROPERTY
+
+                @@CLASSNAMEList.Add(obj@@CLASSNAME);
+            }
+            return @@CLASSNAMEList;
+        }
+
+
+        public static void InsertUpdate@@CLASSNAME(@@CLASSNAME obj@@CLASSNAME)
+        {
+            SQLiteParameter[] p = new SQLiteParameter[@@INSERTPARAMETERCOUNT];
+
+				@@FOREACHINSERTPROPERTY
+
+            obj@@CLASSNAME.@@CLASSNAMEID = int.Parse((new SQLHelper()).ExecuteScalar(CommandType.StoredProcedure, "@@CLASSNAMEInsertUpdate", p).ToString());
+
+        }
+
+
+        public static int Delete@@CLASSNAME(System.Int64? @@CLASSNAMEID)
+        {
+            SQLiteParameter[] p = new SQLiteParameter[1];
+            p[0] = new SQLiteParameter("@@@CLASSNAMEID", @@CLASSNAMEID);
+            return (new SQLHelper()).ExecuteNonQuery(CommandType.StoredProcedure, "@@CLASSNAMEDelete", p);
+        }
+
+
+    }

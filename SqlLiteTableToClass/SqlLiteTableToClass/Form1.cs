@@ -51,40 +51,97 @@ namespace SqlLiteTableToClass
 
         private void button2_Click(object sender, EventArgs e)
         {
-            DataTable DataTable = GetDataTable("select * from " + comboBox1.SelectedItem + " Limit 1");
-            if (DataTable != null)
+            if (!checkBox1.Checked)
             {
-                GenerateXml(DataTable);
+                DataTable DataTable = GetDataTable("select * from " + comboBox1.SelectedItem + " Limit 1");
+                if (DataTable != null)
+                {
+                    GenerateXml(DataTable);
 
-                folderBrowserDialog.ShowDialog();
+                    folderBrowserDialog.ShowDialog();
 
-                Cursor = System.Windows.Forms.Cursors.WaitCursor;
-                string ToolPath = Path.Combine(_directoryPath, "xsd.exe");
-                Process.Start(ToolPath, " " + _xmlPath + " /c /o:" + folderBrowserDialog.SelectedPath + " /n:");
+                    Cursor = Cursors.WaitCursor;
+                    string ToolPath = Path.Combine(_directoryPath, "xsd.exe");
+                    Process.Start(ToolPath, " " + _xmlPath + " /c /o:" + folderBrowserDialog.SelectedPath + " /n:");
 
 
-                RemoveExtrasFromClass();
-                Cursor = System.Windows.Forms.Cursors.Default;
+                    RemoveExtrasFromClass();
+                    Cursor = Cursors.Default;
+                }
             }
+            else
+                GenenrateBAL();
         }
+
+        private void GenenrateBAL()
+        {
+            string TempletePath = Path.Combine(_directoryPath, "BLLTemplete.ad");
+            string ClassName = comboBox1.SelectedItem.ToString();
+            string templete = File.ReadAllText(TempletePath);
+
+            templete = templete.Replace("@@CLASSNAME", ClassName);
+
+            DataTable DataTable = GetDataTable("select * from " + comboBox1.SelectedItem + " Limit 1");
+            string BuildSearchProperties = "";
+            string BuilInsertProperties = "";
+
+            //---------------------------PROPERTIES-----------------------------------------------------
+            const string searchTemplete = "obj@@CLASSNAME.@@PROPERTNAME = @@DATATYPE(dr[\"@@PROPERTNAME\"].ToString());";
+            const string insertTemplete =
+                " p[@@INDEX] = new SQLiteParameter(\"@@@PROPERTNAME\", obj@@CLASSNAME.@@PROPERTNAME);";
+            for (int i = 0; i < DataTable.Columns.Count; i++)
+            {
+                DataColumn DataColumn = DataTable.Columns[i];
+
+                BuildSearchProperties = BuildSearchProperties +
+                                        searchTemplete.Replace("@@CLASSNAME", ClassName)
+                                            .Replace("@@PROPERTNAME", DataColumn.ColumnName)
+                                            .Replace("@@DATATYPE",
+                                                (DataColumn.DataType.Name == "String"
+                                                    ? ""
+                                                    : (DataColumn.DataType.Name + ".Parse"))) + "\r\n\t\t\t\t";
+                BuilInsertProperties = BuilInsertProperties +
+                                       insertTemplete.Replace("@@CLASSNAME", ClassName)
+                                           .Replace("@@PROPERTNAME", DataColumn.ColumnName)
+                                           .Replace("@@INDEX", i.ToString()) + "\r\n\t\t\t\t";
+            }
+            templete = templete.Replace("@@FOREACHSEARCHPROPERTY", BuildSearchProperties);
+            templete = templete.Replace("@@INSERTPARAMETERCOUNT", DataTable.Columns.Count.ToString());
+            templete = templete.Replace("@@FOREACHINSERTPROPERTY", BuilInsertProperties);
+            //---------------------------------------------------------------------------------------------------
+
+            folderBrowserDialog.ShowDialog();
+            File.WriteAllText(Path.Combine(folderBrowserDialog.SelectedPath, ClassName + "BLL.cs"), templete);
+        }
+
         private void RemoveExtrasFromClass()
         {
             Thread.Sleep(2000);
-              string GeneratedClassPath = Path.Combine(folderBrowserDialog.SelectedPath, comboBox1.SelectedItem + ".cs");
-            
-                  string ReadAllText = File.ReadAllText(GeneratedClassPath);
-                  ReadAllText = ReadAllText.Replace("[System.Xml.Serialization.XmlElementAttribute(Form=System.Xml.Schema.XmlSchemaForm.Unqualified)]\r\n", "");
-                  ReadAllText = ReadAllText.Replace("\r\n[System.CodeDom.Compiler.GeneratedCodeAttribute(\"xsd\", \"0.0.0.0\")]", "");
-                  ReadAllText = ReadAllText.Replace("\r\n[System.SerializableAttribute()]", "");
-                  ReadAllText = ReadAllText.Replace("\r\n[System.Diagnostics.DebuggerStepThroughAttribute()]", "");
-                  ReadAllText = ReadAllText.Replace("\r\n[System.ComponentModel.DesignerCategoryAttribute(\"code\")]", "");
-                  ReadAllText = ReadAllText.Replace("\r\n[System.Xml.Serialization.XmlTypeAttribute(AnonymousType=true)]", "");
-                  ReadAllText = ReadAllText.Replace("\r\n[System.Xml.Serialization.XmlRootAttribute(Namespace=\"\", IsNullable=false)]", "");
-                  ReadAllText = ReadAllText.Replace(@"/// <remarks/>", "");
-                  ReadAllText = ReadAllText.Replace("partial ", "");
-                  ReadAllText = ReadAllText.Replace("//------------------------------------------------------------------------------\r\n// <auto-generated>\r\n//     This code was generated by a tool.\r\n//     Runtime Version:4.0.30319.34014\r\n//\r\n//     Changes to this file may cause incorrect behavior and will be lost if\r\n//     the code is regenerated.\r\n// </auto-generated>\r\n//------------------------------------------------------------------------------\r\n\r\n// \n//This source code was auto-generated by MonoXSD\n//\r\n\r\n\r\n\r\n", "");
-                  File.WriteAllText(GeneratedClassPath, ReadAllText);
+            string GeneratedClassPath = Path.Combine(folderBrowserDialog.SelectedPath, comboBox1.SelectedItem + ".cs");
+
+            string ReadAllText = File.ReadAllText(GeneratedClassPath);
+            ReadAllText =
+                ReadAllText.Replace(
+                    "[System.Xml.Serialization.XmlElementAttribute(Form=System.Xml.Schema.XmlSchemaForm.Unqualified)]\r\n",
+                    "");
+            ReadAllText =
+                ReadAllText.Replace("\r\n[System.CodeDom.Compiler.GeneratedCodeAttribute(\"xsd\", \"0.0.0.0\")]", "");
+            ReadAllText = ReadAllText.Replace("\r\n[System.SerializableAttribute()]", "");
+            ReadAllText = ReadAllText.Replace("\r\n[System.Diagnostics.DebuggerStepThroughAttribute()]", "");
+            ReadAllText = ReadAllText.Replace("\r\n[System.ComponentModel.DesignerCategoryAttribute(\"code\")]", "");
+            ReadAllText = ReadAllText.Replace("\r\n[System.Xml.Serialization.XmlTypeAttribute(AnonymousType=true)]", "");
+            ReadAllText =
+                ReadAllText.Replace(
+                    "\r\n[System.Xml.Serialization.XmlRootAttribute(Namespace=\"\", IsNullable=false)]", "");
+            ReadAllText = ReadAllText.Replace(@"/// <remarks/>", "");
+            ReadAllText = ReadAllText.Replace("partial ", "");
+            ReadAllText =
+                ReadAllText.Replace(
+                    "//------------------------------------------------------------------------------\r\n// <auto-generated>\r\n//     This code was generated by a tool.\r\n//     Runtime Version:4.0.30319.34014\r\n//\r\n//     Changes to this file may cause incorrect behavior and will be lost if\r\n//     the code is regenerated.\r\n// </auto-generated>\r\n//------------------------------------------------------------------------------\r\n\r\n// \n//This source code was auto-generated by MonoXSD\n//\r\n\r\n\r\n\r\n",
+                    "");
+            File.WriteAllText(GeneratedClassPath, ReadAllText);
         }
+
         public DataTable GetDataTable(string sql)
         {
             DataTable dt = new DataTable();
